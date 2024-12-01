@@ -1,0 +1,5 @@
+services:
+  chat-server:
+    image: harisheoran/my-chat-system-server:main
+    ports:
+      - "1316:1316"

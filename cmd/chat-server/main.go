@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -15,13 +15,18 @@ import (
 /*
 Role: Server
 Purpose:
-
 */
 
 type Message struct {
-	Payload       string
-	PayloadType   int
-	RemoteAddress net.Addr
+	Payload     string `json:"Payload"`
+	PayloadType int    `json:"PayloadType"`
+	// RemoteAddress string `json:"RemoteAddress"`
+}
+
+type Address struct {
+	IP   string `json:"IP"`
+	Port string `json:"Port"`
+	Zone string `json:"Zone"`
 }
 
 var (
@@ -37,13 +42,16 @@ var (
 		DB:       0,                                  // use default DB
 	})
 
-	myChannel = "chat"
+	myChannel = "common-room"
 
 	//This map keeps track of connected WebSocket clients.
 	client = make(map[*websocket.Conn]bool)
 
-	// broadcast channel
-	broadcast = make(chan Message)
+	// publish channel
+	publishChannel = make(chan Message)
+
+	// subscribe channel
+	broadcastChannel = make(chan string)
 )
 
 func main() {
@@ -58,8 +66,9 @@ func main() {
 	mainRouter.HandleFunc("/v1/health", healthHandler)
 	mainRouter.HandleFunc("/v1/chat", chatHandler)
 
-	// write messages
-	go writeMessages()
+	go publishToRedis()
+	go subscribeToRedis()
+	go broadcastMessages()
 
 	log.Println("server starting ")
 	err = http.ListenAndServe(":1316", mainRouter)
@@ -94,9 +103,9 @@ func chatHandler(w http.ResponseWriter, request *http.Request) {
 
 			message.Payload = string(messageByte)
 			message.PayloadType = mt
-			message.RemoteAddress = connection.RemoteAddr()
+			//	message.RemoteAddress = connection.RemoteAddr().String()
 			// now pass message to the broadcast channel
-			broadcast <- message
+			publishChannel <- message
 		}
 	}(webSocketConnection)
 
@@ -106,20 +115,64 @@ func healthHandler(w http.ResponseWriter, request *http.Request) {
 	fmt.Fprintf(w, "my chat system's health is OK!.")
 }
 
-func writeMessages() {
+func broadcastMessages() {
+	//	var message Message
 	for {
-		recieveMessage := <-broadcast
+		recieveMessage := <-broadcastChannel
+
+		var message Message
+
+		fmt.Println("RECIEVED IN BROADCAST:", recieveMessage)
+
+		err := json.Unmarshal([]byte(recieveMessage), &message)
+		if err != nil {
+			log.Printf("ERROR: Unable to unmarshal message: %v", err)
+			continue
+		}
+
 		for clientConnection := range client {
-			if recieveMessage.RemoteAddress == clientConnection.RemoteAddr() {
-				continue
-			} else {
-				err := clientConnection.WriteMessage(recieveMessage.PayloadType, []byte(recieveMessage.Payload))
-				if err != nil {
-					log.Println("ERROR: writing message", err)
-					clientConnection.Close()
-					delete(client, clientConnection)
-				}
+			err := clientConnection.WriteMessage(message.PayloadType, []byte(message.Payload))
+			if err != nil {
+				log.Println("ERROR: writing message", err)
+				clientConnection.Close()
+				delete(client, clientConnection)
 			}
 		}
 	}
+}
+
+func publishToRedis() {
+	for {
+		payload := <-publishChannel
+
+		payloadJson, err := json.Marshal(payload)
+		if err != nil {
+			log.Println("ERROR: marshalling the payload json")
+		}
+		err = rdb.Publish(ctx, myChannel, payloadJson).Err()
+		if err != nil {
+			panic(err)
+		}
+		log.Println("INFO: message published")
+	}
+}
+
+func subscribeToRedis() {
+	// There is no error because go-redis automatically reconnects on error.
+	pubsub := rdb.Subscribe(ctx, myChannel)
+
+	// Close the subscription when we are done.
+	defer pubsub.Close()
+
+	for {
+		msg, err := pubsub.ReceiveMessage(ctx)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println(msg.Channel, msg.Payload)
+		broadcastChannel <- msg.Payload
+		log.Println("INFO: message subscribed")
+	}
+
 }
