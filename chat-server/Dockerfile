@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/bin/my-chat-system-server .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/bin/my-chat-system-server ./cmd/server
 
 FROM alpine:3.20 as prod
 
