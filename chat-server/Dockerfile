@@ -15,6 +15,7 @@ FROM alpine:3.20 as prod
 WORKDIR /app
 
 COPY --from=build /app/bin/my-chat-system-server /app/bin/my-chat-system-server
+COPY --from=build /app/ui /app/ui
 
 RUN chmod +x /app/bin/my-chat-system-server
 
