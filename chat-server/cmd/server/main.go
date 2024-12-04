@@ -22,10 +22,10 @@ var (
 	upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
-		CheckOrigin: func(r *http.Request) bool {
-			// Allow all origins (not secure, only for testing)
-			return true
-		},
+		/*CheckOrigin: func(r *http.Request) bool {
+		// Allow all origins (not secure, only for testing)
+		return true
+		},*/
 	}
 
 	myChannel = "common-room"
