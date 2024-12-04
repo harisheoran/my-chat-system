@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"text/template"
 
 	"github.com/gorilla/websocket"
 )
@@ -44,4 +45,13 @@ func (app *app) chatHandler(w http.ResponseWriter, request *http.Request) {
 			publishChannel <- message
 		}
 	}(webSocketConnection)
+}
+
+func (app *app) homeHandler(w http.ResponseWriter, request *http.Request) {
+	uiTemplates := "ui/index.html"
+	templates, err := template.ParseFiles(uiTemplates)
+	if err != nil {
+		log.Println("ERROR: parsing the template files", err)
+	}
+	templates.Execute(w, nil)
 }
