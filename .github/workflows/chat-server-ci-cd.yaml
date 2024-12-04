@@ -32,6 +32,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Deploy the container with latest image
         uses: appleboy/ssh-action@v0.1.10
@@ -42,5 +44,5 @@ jobs:
           port: ${{ secrets.PORT }}
           command_timeout: 30m
           script: |
-            docker compose -f chat-server.yaml down
+            docker pull harisheoran/my-chat-system-server:main
             docker compose -f chat-server.yaml up -d

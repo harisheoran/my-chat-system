@@ -1,5 +1,7 @@
 services:
   chat-server:
-    image: harisheoran/my-chat-system-server:main
+    image: harisheoran/my-chat-system-server-local:main
     ports:
       - "1316:1316"
+    volumes:
+      - .env:/app/.env
