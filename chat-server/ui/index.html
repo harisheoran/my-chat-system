@@ -30,9 +30,7 @@
                 };
 
                 if (window["WebSocket"]) {
-                    conn = new WebSocket(
-                        "wss://chat.harisheoran.xyz:1316/v1/chat",
-                    );
+                    conn = new WebSocket("wss://chat.harisheoran.xyz/v1/chat");
                     conn.onclose = function (evt) {
                         var item = document.createElement("div");
                         item.innerHTML = "<b>Connection closed.</b>";
