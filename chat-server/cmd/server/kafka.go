@@ -5,22 +5,26 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl/scram"
 )
 
-var (
-	kafkaUrl   = "kafka-my-chat-system-particleasw123-2262.c.aivencloud.com:15563"
-	TOPIC_NAME = "COMMON"
-	producer   *kafka.Writer
-)
+var kafkaUrl = "kafka-my-chat-system-particleasw123-2262.c.aivencloud.com:15563"
 
 func (app *app) kafkaInitialize() (*kafka.Dialer, error) {
+	err := godotenv.Load()
+	if err != nil {
+		app.errorlogger.Println("can't read the env files")
+	}
 
-	caCert, err := ioutil.ReadFile("ca.pem")
+	var username = os.Getenv("KAFKA_USERNAME")
+	var password = os.Getenv("KAFKA_PASSWORD")
+
+	caCert, err := os.ReadFile("ca.pem")
 	if err != nil {
 		app.errorlogger.Println("Failed to read CA certificate file: ", err)
 		return nil, err
@@ -36,7 +40,7 @@ func (app *app) kafkaInitialize() (*kafka.Dialer, error) {
 	tlsConfig := &tls.Config{
 		RootCAs: caCertPool,
 	}
-	scram, err := scram.Mechanism(scram.SHA512, "avnadmin", "AVNS_W9utDjaLB-Z2-4idRAy")
+	scram, err := scram.Mechanism(scram.SHA512, username, password)
 	if err != nil {
 		app.errorlogger.Println("Failed to create scram mechanism: ", err)
 		return nil, err

@@ -13,6 +13,7 @@ import (
 	postgre "github.com/harisheoran/my-chat-system/pkg/model/postgre"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
+	"github.com/segmentio/kafka-go"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -42,6 +43,9 @@ var (
 
 	// kafka Channel
 	kafkaChannel = make(chan string)
+
+	TOPIC_NAME = "COMMON"
+	producer   *kafka.Writer
 )
 
 func main() {

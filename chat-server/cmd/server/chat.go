@@ -56,8 +56,9 @@ func (app *app) produceToKafka() {
 		err := app.produceMessage(payload)
 		if err != nil {
 			app.errorlogger.Println("unable to produce to kafka: ", err)
+		} else {
+			app.infologger.Println("Message published to kafka")
 		}
-		app.infologger.Println("Message published to kafka")
 	}
 }
 

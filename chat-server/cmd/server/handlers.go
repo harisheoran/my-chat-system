@@ -43,7 +43,6 @@ func (app *app) chatHandler(w http.ResponseWriter, request *http.Request) {
 			//	message.RemoteAddress = connection.RemoteAddr().String()
 
 			publishChannel <- message
-			//kafkaChannel <- message.Payload
 		}
 	}(webSocketConnection)
 }
