@@ -14,7 +14,7 @@ func (app *app) broadcastMessages() {
 		var message Message
 		err := json.Unmarshal([]byte(recieveMessage), &message)
 		if err != nil {
-			app.errorlogger.Println("Unable to unmarshal message: %v", err)
+			app.errorlogger.Println("Unable to unmarshal message:", err)
 			continue
 		}
 
@@ -26,6 +26,8 @@ func (app *app) broadcastMessages() {
 				delete(client, clientConnection)
 			}
 		}
+
+		kafkaChannel <- message.Payload
 	}
 }
 
@@ -42,7 +44,20 @@ func (app *app) publishToRedis() {
 		if err != nil {
 			panic(err)
 		}
-		app.infologger.Println("message published")
+		app.infologger.Println("message published to redis")
+
+	}
+}
+
+func (app *app) produceToKafka() {
+	for {
+		payload := <-kafkaChannel
+		// publish to Kafka broker
+		err := app.produceMessage(payload)
+		if err != nil {
+			app.errorlogger.Println("unable to produce to kafka: ", err)
+		}
+		app.infologger.Println("Message published to kafka")
 	}
 }
 

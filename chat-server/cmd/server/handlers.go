@@ -41,17 +41,51 @@ func (app *app) chatHandler(w http.ResponseWriter, request *http.Request) {
 			message.Payload = string(messageByte)
 			message.PayloadType = mt
 			//	message.RemoteAddress = connection.RemoteAddr().String()
-			// now pass message to the broadcast channel
+
 			publishChannel <- message
+			//kafkaChannel <- message.Payload
 		}
 	}(webSocketConnection)
 }
 
 func (app *app) homeHandler(w http.ResponseWriter, request *http.Request) {
-	uiTemplates := "ui/index.html"
-	templates, err := template.ParseFiles(uiTemplates)
-	if err != nil {
-		log.Println("ERROR: parsing the template files", err)
+	uiTemplates := []string{
+		"ui/index.page.tmpl",
+		"ui/base.tmpl",
 	}
-	templates.Execute(w, nil)
+	templates, err := template.ParseFiles(uiTemplates...)
+	if err != nil {
+		app.errorlogger.Println("ERROR: parsing the template files", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	err = templates.Execute(w, nil)
+	if err != nil {
+		app.errorlogger.Println(err.Error())
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+func (app *app) authPageHandler(w http.ResponseWriter, request *http.Request) {
+	mytemplate := "ui/auth.html"
+
+	templates, err := template.ParseFiles(mytemplate)
+	if err != nil {
+		app.errorlogger.Println("ERROR: parsing the template files", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	err = templates.Execute(w, nil)
+	if err != nil {
+		app.errorlogger.Println(err.Error())
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
+	err := request.ParseForm()
+	if err != nil {
+		app.errorlogger.Print("unable to parse the form", err)
+
+	}
 }
