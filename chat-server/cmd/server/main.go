@@ -9,14 +9,14 @@ import (
 	"strconv"
 
 	"github.com/gorilla/websocket"
+	"github.com/harisheoran/my-chat-system/pkg/model"
+	postgre "github.com/harisheoran/my-chat-system/pkg/model/postgre"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
+	"github.com/segmentio/kafka-go"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
-
-/*
-Role: Server
-Purpose:
-*/
 
 var (
 	upgrader = websocket.Upgrader{
@@ -40,6 +40,12 @@ var (
 
 	// subscribe channel
 	broadcastChannel = make(chan string)
+
+	// kafka Channel
+	kafkaChannel = make(chan string)
+
+	TOPIC_NAME = "COMMON"
+	producer   *kafka.Writer
 )
 
 func main() {
@@ -51,6 +57,13 @@ func main() {
 	err := godotenv.Load()
 	if err != nil {
 		errorlogger.Println("can't read the env files")
+	}
+	dsn := os.Getenv("DBURI")
+
+	// create database connection pool
+	databaseConnection, err := createDbConnectionPool(dsn)
+	if err != nil {
+		errorlogger.Println("unable to get a database connection from the pool")
 	}
 
 	// establish the redis connection
@@ -73,9 +86,13 @@ func main() {
 		infologger:      infologger,
 		errorlogger:     errorlogger,
 		redisConnection: rdb,
+		messageController: postgre.MessageController{
+			DbConnection: databaseConnection,
+		},
 	}
 
 	go app.publishToRedis()
+	go app.produceToKafka()
 	go app.subscribeToRedis()
 	go app.broadcastMessages()
 
@@ -92,4 +109,19 @@ func main() {
 	if err != nil {
 		app.errorlogger.Fatal("unable to start the server on port 1316", err)
 	}
+}
+
+func createDbConnectionPool(dsn string) (*gorm.DB, error) {
+	dbConnectionPool, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Run the automigration for Project Model
+	if err := dbConnectionPool.AutoMigrate(&model.Message{}); err != nil {
+		return nil, err
+	}
+
+	return dbConnectionPool, nil
 }
