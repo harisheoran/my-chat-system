@@ -92,3 +92,8 @@ func (app *app) produceToKafka() {
 }
 
 // consume message from kafka
+func (app *app) consumeFromKafka() {
+	for {
+
+	}
+}

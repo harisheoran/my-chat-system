@@ -42,8 +42,7 @@ func (app *app) kafkaInitialize() (*kafka.Dialer, error) {
 	}
 
 	tlsConfig := &tls.Config{
-		RootCAs:            caCertPool,
-		InsecureSkipVerify: false, // Ensure this is false in production.
+		RootCAs: caCertPool,
 	}
 	scram, err := scram.Mechanism(scram.SHA512, username, password)
 	if err != nil {
