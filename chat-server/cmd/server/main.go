@@ -46,6 +46,7 @@ var (
 
 	TOPIC_NAME = "COMMON"
 	producer   *kafka.Writer
+	consumer   *kafka.Reader
 )
 
 func main() {
@@ -111,6 +112,7 @@ func main() {
 	}
 }
 
+// establish the db connection
 func createDbConnectionPool(dsn string) (*gorm.DB, error) {
 	dbConnectionPool, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 

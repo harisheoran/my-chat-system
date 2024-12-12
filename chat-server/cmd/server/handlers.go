@@ -9,6 +9,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+/*
+Handlers for all the routes present in routes.go file
+- REST handling
+*/
+
 func (app *app) healthHandler(w http.ResponseWriter, request *http.Request) {
 	fmt.Fprintf(w, "my chat system's health is OK!.")
 }
