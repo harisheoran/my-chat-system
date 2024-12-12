@@ -6,6 +6,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+/*
+Contains all the API's routes
+*/
+
 func (app *app) router() http.Handler {
 	mainRouter := mux.NewRouter()
 	mainRouter.HandleFunc("/v1/home", app.homeHandler)

@@ -2,8 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 )
+
+/*
+this file contains logic for realtime chat
+- Web Socket listening and broadcasting
+- Redis publishing and subscribing
+- Kafka producing
+*/
 
 // broadcast the message to every connection
 func (app *app) broadcastMessages() {
@@ -27,6 +33,7 @@ func (app *app) broadcastMessages() {
 			}
 		}
 
+		// pass message to kafka channel
 		kafkaChannel <- message.Payload
 	}
 }
@@ -49,6 +56,28 @@ func (app *app) publishToRedis() {
 	}
 }
 
+// subscribe to the Redis channel
+func (app *app) subscribeToRedis() {
+	// There is no error because go-redis automatically reconnects on error.
+	pubsub := app.redisConnection.Subscribe(ctx, myChannel)
+
+	// Close the subscription when we are done.
+	defer pubsub.Close()
+
+	for {
+		msg, err := pubsub.ReceiveMessage(ctx)
+		if err != nil {
+			app.errorlogger.Println("unable to subscribe to the redis channel", err)
+		} else {
+			app.infologger.Println("message subscribed from redis")
+		}
+
+		// pass message to the broadcast channel
+		broadcastChannel <- msg.Payload
+	}
+}
+
+// produce message to the kafka channel
 func (app *app) produceToKafka() {
 	for {
 		payload := <-kafkaChannel
@@ -62,21 +91,4 @@ func (app *app) produceToKafka() {
 	}
 }
 
-// subscribe to the Redis channel
-func (app *app) subscribeToRedis() {
-	// There is no error because go-redis automatically reconnects on error.
-	pubsub := app.redisConnection.Subscribe(ctx, myChannel)
-
-	// Close the subscription when we are done.
-	defer pubsub.Close()
-
-	for {
-		msg, err := pubsub.ReceiveMessage(ctx)
-		if err != nil {
-			app.errorlogger.Println("unable to subscribe to the redis channel", err)
-		}
-		fmt.Println(msg.Channel, msg.Payload)
-		broadcastChannel <- msg.Payload
-		app.infologger.Println("message subscribed")
-	}
-}
+// consume message from kafka

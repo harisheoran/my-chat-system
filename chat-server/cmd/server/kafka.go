@@ -13,6 +13,10 @@ import (
 	"github.com/segmentio/kafka-go/sasl/scram"
 )
 
+/*
+Contains all the kafka code
+*/
+
 var kafkaUrl = "kafka-my-chat-system-particleasw123-2262.c.aivencloud.com:15563"
 
 func (app *app) kafkaInitialize() (*kafka.Dialer, error) {
@@ -38,7 +42,8 @@ func (app *app) kafkaInitialize() (*kafka.Dialer, error) {
 	}
 
 	tlsConfig := &tls.Config{
-		RootCAs: caCertPool,
+		RootCAs:            caCertPool,
+		InsecureSkipVerify: false, // Ensure this is false in production.
 	}
 	scram, err := scram.Mechanism(scram.SHA512, username, password)
 	if err != nil {
@@ -100,6 +105,11 @@ func (app *app) produceMessage(message string) error {
 }
 
 func (app *app) startKafkaConsumer() {
+	app.infologger.Println("starting the kafka consumer function")
+
+	if consumer == nil {
+
+	}
 
 	dialer, err := app.kafkaInitialize()
 	if err != nil {
