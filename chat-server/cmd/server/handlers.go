@@ -114,7 +114,7 @@ func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
 	}
 
 	// check existing user
-	user, err := app.userController.CheckUserExists(requestBody.Email)
+	user := app.userController.CheckUserExists(requestBody.Email)
 	if user != nil {
 		// compare password with hashedPassword
 		err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(requestBody.Password))
@@ -139,7 +139,7 @@ func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
 		} else {
 			sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
 				Error:   "bad_request",
-				Message: err.Error(),
+				Message: "Internal Server Error",
 			})
 		}
 		return

@@ -11,14 +11,14 @@ type UserController struct {
 	DbConnection *gorm.DB
 }
 
-func (uc *UserController) CheckUserExists(email string) (interface{}, error) {
+func (uc *UserController) CheckUserExists(email string) interface{} {
 	var user model.User
 
 	// check for existing user with email
 	query := uc.DbConnection.Where("email = ?", email).First(&user)
 
 	if query.Error != nil {
-		return nil, query.Error
+		return nil
 	}
 
 	// send existing user
@@ -28,7 +28,7 @@ func (uc *UserController) CheckUserExists(email string) (interface{}, error) {
 		"password": user.Password,
 		"type":     "login",
 	}
-	return response, nil
+	return response
 
 }
 
