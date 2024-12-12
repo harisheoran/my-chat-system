@@ -64,10 +64,8 @@ func main() {
 	// create database connection pool
 	databaseConnection, err := createDbConnectionPool(dsn)
 	if err != nil {
-		errorlogger.Println("unable to get a database connection from the pool")
+		errorlogger.Println("unable to get a database connection from the pool", err)
 	}
-	// create table in db
-	databaseConnection.AutoMigrate(&model.User{})
 
 	// establish the redis connection
 	redis_db, err := strconv.ParseInt(os.Getenv("REDIS_DB"), 2, 64)
@@ -90,6 +88,9 @@ func main() {
 		errorlogger:     errorlogger,
 		redisConnection: rdb,
 		messageController: postgre.MessageController{
+			DbConnection: databaseConnection,
+		},
+		userController: postgre.UserController{
 			DbConnection: databaseConnection,
 		},
 	}
@@ -123,7 +124,7 @@ func createDbConnectionPool(dsn string) (*gorm.DB, error) {
 	}
 
 	// Run the automigration for Project Model
-	if err := dbConnectionPool.AutoMigrate(&model.Message{}); err != nil {
+	if err := dbConnectionPool.AutoMigrate(&model.Message{}, &model.User{}); err != nil {
 		return nil, err
 	}
 

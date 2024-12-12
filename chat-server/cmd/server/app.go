@@ -17,6 +17,7 @@ type app struct {
 	errorlogger       *log.Logger
 	redisConnection   *redis.Client
 	messageController postgre.MessageController
+	userController    postgre.UserController
 }
 
 type Message struct {

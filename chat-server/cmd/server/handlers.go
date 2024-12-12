@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/gorilla/websocket"
+	"golang.org/x/crypto/bcrypt"
 )
 
 /*
@@ -91,6 +92,7 @@ func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 	defer request.Body.Close()
+
 	var requestBody AuthRequestBody
 	err = json.Unmarshal(reqBodyContent, &requestBody)
 	if err != nil {
@@ -100,7 +102,9 @@ func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
 		})
 		return
 	}
-	data, err := app.userAuth(&requestBody)
+
+	// create hash of password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(requestBody.Password), 10)
 	if err != nil {
 		sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
 			Error:   "bad_request",
@@ -108,8 +112,50 @@ func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
 		})
 		return
 	}
-	sendJSONResponse(w, http.StatusOK, SuccessResponse{
-		Data:    data,
-		Message: "authentication success",
-	})
+
+	// check existing user
+	user, err := app.userController.CheckUserExists(requestBody.Email)
+	if user != nil {
+		// compare password with hashedPassword
+		err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(requestBody.Password))
+		if err != nil {
+			sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
+				Error:   "bad_request",
+				Message: err.Error(),
+			})
+			return
+		}
+		if userMap, ok := user.(map[string]interface{}); ok {
+			username := userMap["username"].(string)
+			email := userMap["email"].(string)
+			sendJSONResponse(w, http.StatusBadRequest, SuccessResponse{
+				Message: "user found",
+				Data: map[string]interface{}{
+					"username": username,
+					"email":    email,
+					"type":     "login",
+				},
+			})
+		} else {
+			sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
+				Error:   "bad_request",
+				Message: err.Error(),
+			})
+		}
+		return
+	} else {
+		// create new user
+		user, err := app.userController.CreateNewUser(requestBody.Name, requestBody.Email, string(requestBody.Password))
+		if err != nil {
+			sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
+				Error:   "bad_request",
+				Message: err.Error(),
+			})
+			return
+		}
+		sendJSONResponse(w, http.StatusCreated, SuccessResponse{
+			Message: "user created",
+			Data:    user,
+		})
+	}
 }
