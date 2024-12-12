@@ -51,8 +51,8 @@ var (
 
 func main() {
 	// create two loggers for info and error
-	errorlogger := log.New(os.Stderr, "ERROR", log.Ldate|log.Ltime)
-	infologger := log.New(os.Stdin, "INFO", log.Ldate|log.Ltime|log.Lshortfile)
+	errorlogger := log.New(os.Stderr, "ERROR ", log.Ldate|log.Ltime)
+	infologger := log.New(os.Stdin, "INFO ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	// load .env file
 	err := godotenv.Load()
