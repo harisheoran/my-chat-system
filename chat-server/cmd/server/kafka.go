@@ -104,11 +104,7 @@ func (app *app) produceMessage(message string) error {
 }
 
 func (app *app) startKafkaConsumer() {
-	app.infologger.Println("starting the kafka consumer function")
-
-	if consumer == nil {
-
-	}
+	app.infologger.Println("starting the kafka consumer func")
 
 	dialer, err := app.kafkaInitialize()
 	if err != nil {
