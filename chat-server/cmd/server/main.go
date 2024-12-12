@@ -66,6 +66,8 @@ func main() {
 	if err != nil {
 		errorlogger.Println("unable to get a database connection from the pool")
 	}
+	// create table in db
+	databaseConnection.AutoMigrate(&model.User{})
 
 	// establish the redis connection
 	redis_db, err := strconv.ParseInt(os.Getenv("REDIS_DB"), 2, 64)

@@ -7,7 +7,13 @@ import (
 )
 
 type User struct {
-	username string `json:"username"`
+	gorm.Model
+	ID        uint `gorm:"primaryKey"`
+	Username  string
+	Name      string
+	Email     string `gorm:"unique;not null"`
+	Password  string
+	CreatedAt time.Time
 }
 
 type Message struct {

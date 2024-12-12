@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"text/template"
@@ -70,26 +72,44 @@ func (app *app) homeHandler(w http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func (app *app) authPageHandler(w http.ResponseWriter, request *http.Request) {
-	mytemplate := "ui/auth.html"
-
-	templates, err := template.ParseFiles(mytemplate)
-	if err != nil {
-		app.errorlogger.Println("ERROR: parsing the template files", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
+	method := request.Method
+	if method != "POST" {
+		sendJSONResponse(w, http.StatusMethodNotAllowed, ErrorResponse{
+			Error:   "method_not_allowed",
+			Message: "method not allowed",
+		})
 		return
 	}
-	err = templates.Execute(w, nil)
-	if err != nil {
-		app.errorlogger.Println(err.Error())
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-	}
-}
 
-func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
-	err := request.ParseForm()
+	reqBodyContent, err := io.ReadAll(request.Body)
 	if err != nil {
-		app.errorlogger.Print("unable to parse the form", err)
-
+		sendJSONResponse(w, http.StatusInternalServerError, ErrorResponse{
+			Error:   err.Error(),
+			Message: "Internal Server Error",
+		})
+		return
 	}
+	defer request.Body.Close()
+	var requestBody AuthRequestBody
+	err = json.Unmarshal(reqBodyContent, &requestBody)
+	if err != nil {
+		sendJSONResponse(w, http.StatusInternalServerError, ErrorResponse{
+			Error:   err.Error(),
+			Message: "Internal Server Error",
+		})
+		return
+	}
+	data, err := app.userAuth(&requestBody)
+	if err != nil {
+		sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
+			Error:   "bad_request",
+			Message: err.Error(),
+		})
+		return
+	}
+	sendJSONResponse(w, http.StatusOK, SuccessResponse{
+		Data:    data,
+		Message: "authentication success",
+	})
 }
