@@ -1,12 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"text/template"
 
 	"github.com/gorilla/websocket"
+	"golang.org/x/crypto/bcrypt"
 )
 
 /*
@@ -71,26 +74,89 @@ func (app *app) homeHandler(w http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func (app *app) authPageHandler(w http.ResponseWriter, request *http.Request) {
-	mytemplate := "ui/auth.html"
-
-	templates, err := template.ParseFiles(mytemplate)
-	if err != nil {
-		app.errorlogger.Println("ERROR: parsing the template files", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
+	method := request.Method
+	if method != "POST" {
+		sendJSONResponse(w, http.StatusMethodNotAllowed, ErrorResponse{
+			Error:   "method_not_allowed",
+			Message: "method not allowed",
+		})
 		return
 	}
-	err = templates.Execute(w, nil)
+
+	reqBodyContent, err := io.ReadAll(request.Body)
 	if err != nil {
-		app.errorlogger.Println(err.Error())
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		sendJSONResponse(w, http.StatusInternalServerError, ErrorResponse{
+			Error:   err.Error(),
+			Message: "Internal Server Error",
+		})
+		return
 	}
-}
+	defer request.Body.Close()
 
-func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
-	err := request.ParseForm()
+	var requestBody AuthRequestBody
+	err = json.Unmarshal(reqBodyContent, &requestBody)
 	if err != nil {
-		app.errorlogger.Print("unable to parse the form", err)
+		sendJSONResponse(w, http.StatusInternalServerError, ErrorResponse{
+			Error:   err.Error(),
+			Message: "Internal Server Error",
+		})
+		return
+	}
 
+	// create hash of password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(requestBody.Password), 10)
+	if err != nil {
+		sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
+			Error:   "bad_request",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// check existing user
+	user := app.userController.CheckUserExists(requestBody.Email)
+	if user != nil {
+		// compare password with hashedPassword
+		err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(requestBody.Password))
+		if err != nil {
+			sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
+				Error:   "bad_request",
+				Message: err.Error(),
+			})
+			return
+		}
+		if userMap, ok := user.(map[string]interface{}); ok {
+			username := userMap["username"].(string)
+			email := userMap["email"].(string)
+			sendJSONResponse(w, http.StatusBadRequest, SuccessResponse{
+				Message: "user found",
+				Data: map[string]interface{}{
+					"username": username,
+					"email":    email,
+					"type":     "login",
+				},
+			})
+		} else {
+			sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
+				Error:   "bad_request",
+				Message: "Internal Server Error",
+			})
+		}
+		return
+	} else {
+		// create new user
+		user, err := app.userController.CreateNewUser(requestBody.Name, requestBody.Email, string(requestBody.Password))
+		if err != nil {
+			sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
+				Error:   "bad_request",
+				Message: err.Error(),
+			})
+			return
+		}
+		sendJSONResponse(w, http.StatusCreated, SuccessResponse{
+			Message: "user created",
+			Data:    user,
+		})
 	}
 }

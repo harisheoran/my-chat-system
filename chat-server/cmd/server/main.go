@@ -70,7 +70,7 @@ func main() {
 	// create database connection pool
 	databaseConnection, err := createDbConnectionPool(dsn)
 	if err != nil {
-		errorlogger.Println("unable to get a database connection from the pool")
+		errorlogger.Println("unable to get a database connection from the pool", err)
 	}
 
 	// establish the redis connection
@@ -94,6 +94,9 @@ func main() {
 		errorlogger:     errorlogger,
 		redisConnection: rdb,
 		messageController: postgre.MessageController{
+			DbConnection: databaseConnection,
+		},
+		userController: postgre.UserController{
 			DbConnection: databaseConnection,
 		},
 		kafkaProducer: createProducer(),
@@ -132,7 +135,7 @@ func createDbConnectionPool(dsn string) (*gorm.DB, error) {
 	}
 
 	// Run the automigration for Project Model
-	if err := dbConnectionPool.AutoMigrate(&model.Message{}); err != nil {
+	if err := dbConnectionPool.AutoMigrate(&model.Message{}, &model.User{}); err != nil {
 		return nil, err
 	}
 
