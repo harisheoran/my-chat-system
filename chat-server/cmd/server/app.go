@@ -5,6 +5,7 @@ import (
 
 	postgre "github.com/harisheoran/my-chat-system/pkg/model/postgre"
 	"github.com/redis/go-redis/v9"
+	"github.com/segmentio/kafka-go"
 )
 
 /*
@@ -17,6 +18,7 @@ type app struct {
 	errorlogger       *log.Logger
 	redisConnection   *redis.Client
 	messageController postgre.MessageController
+	kafkaProducer     *kafka.Writer
 }
 
 type Message struct {

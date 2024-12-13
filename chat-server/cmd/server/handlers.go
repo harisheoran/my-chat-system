@@ -18,6 +18,7 @@ func (app *app) healthHandler(w http.ResponseWriter, request *http.Request) {
 	fmt.Fprintf(w, "my chat system's health is OK!.")
 }
 
+// main chat handler which upgrade http / https connection to web socket
 func (app *app) chatHandler(w http.ResponseWriter, request *http.Request) {
 	webSocketConnection, err := upgrader.Upgrade(w, request, nil)
 	if err != nil {
@@ -25,7 +26,7 @@ func (app *app) chatHandler(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Println("INFO: connection upgraded to Web Socket")
+	app.infologger.Println("connection upgraded to Web Socket")
 
 	//defer webSocketConnection.Close()
 
