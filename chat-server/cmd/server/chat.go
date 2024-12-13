@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/segmentio/kafka-go"
 )
 
 /*
@@ -33,8 +38,6 @@ func (app *app) broadcastMessages() {
 			}
 		}
 
-		// pass message to kafka channel
-		kafkaChannel <- message.Payload
 	}
 }
 
@@ -79,14 +82,40 @@ func (app *app) subscribeToRedis() {
 
 // produce message to the kafka channel
 func (app *app) produceToKafka() {
+
+	// There is no error because go-redis automatically reconnects on error.
+	pubsub := app.redisConnection.Subscribe(ctx, myChannel)
+
+	// Close the subscription when we are done.
+	defer pubsub.Close()
+	defer app.kafkaProducer.Close()
+
 	for {
-		payload := <-kafkaChannel
-		// publish to Kafka broker
-		err := app.produceMessage(payload)
+		msg, err := pubsub.ReceiveMessage(ctx)
 		if err != nil {
-			app.errorlogger.Println("unable to produce to kafka: ", err)
+			app.errorlogger.Println("unable to subscribe to the redis channel for kafka", err)
 		} else {
-			app.infologger.Println("Message published to kafka")
+			app.infologger.Println("message subscribed from redis for kafka")
+		}
+
+		var message Message
+		err = json.Unmarshal([]byte(msg.Payload), &message)
+		if err != nil {
+			app.errorlogger.Println("Unable to unmarshal message:", err)
+			continue
+		}
+		fmt.Println("From Redis subscribed value is: ", message)
+
+		// publish to Kafka broker
+		err = app.kafkaProducer.WriteMessages(context.Background(), kafka.Message{
+			Key:   []byte(fmt.Sprintf("message-%s", time.Now().Format("2006-01-02"))),
+			Value: []byte(message.Payload),
+		})
+		if err != nil {
+			app.errorlogger.Println("Unable to produce to kafka", err)
+		} else {
+			app.infologger.Println("MESSAGE SENT: ", message.Payload)
 		}
 	}
+
 }
