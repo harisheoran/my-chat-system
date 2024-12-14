@@ -110,7 +110,8 @@ func main() {
 		userController: postgre.UserController{
 			DbConnection: databaseConnection,
 		},
-		kafkaProducer: createProducer(),
+		kafkaProducer: createKafkaProducer(),
+		kafkaConsumer: createKafkaConsumer(),
 		appConfig:     &appConfig,
 	}
 
@@ -119,6 +120,7 @@ func main() {
 	go app.subscribeToRedis()
 	go app.broadcastMessages()
 	go app.produceToKafka()
+	//	go app.consumeFromKafka()
 
 	// start the server
 	port := fmt.Sprintf(":%d", app.appConfig.port)
@@ -192,8 +194,8 @@ func kafkaInitialize() (*kafka.Dialer, error) {
 	return dialer, nil
 }
 
-// create a producer
-func createProducer() *kafka.Writer {
+// create a kafka producer
+func createKafkaProducer() *kafka.Writer {
 	dailer, err := kafkaInitialize()
 	if err != nil {
 		log.Println("unable to authenticate or initialize with Kafka: ", err)
@@ -207,4 +209,22 @@ func createProducer() *kafka.Writer {
 	})
 
 	return producer
+}
+
+// create a kafka consumer
+func createKafkaConsumer() *kafka.Reader {
+
+	dialer, err := kafkaInitialize()
+	if err != nil {
+		log.Println("unable to authenticate or initialize with Kafka: ", err)
+	}
+
+	// init consumer
+	consumer := kafka.NewReader(kafka.ReaderConfig{
+		Brokers: []string{kafkaUrl},
+		Topic:   TOPIC_NAME,
+		Dialer:  dialer,
+	})
+
+	return consumer
 }

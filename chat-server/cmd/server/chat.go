@@ -13,9 +13,8 @@ import (
 this file contains logic for realtime chat
 - Web Socket listening and broadcasting
 - Redis publishing and subscribing
-- Kafka producing
+- Kafka producing and consuming
 */
-
 // broadcast the message to every connection
 func (app *app) broadcastMessages() {
 	//	var message Message
@@ -54,12 +53,12 @@ func (app *app) publishToRedis() {
 		if err != nil {
 			panic(err)
 		}
-		app.infologger.Println("message published to redis")
 
+		app.infologger.Println("message published to redis")
 	}
 }
 
-// subscribe to the Redis channel
+// subscribe to the Redis channel and pass to the broadcast function
 func (app *app) subscribeToRedis() {
 	// There is no error because go-redis automatically reconnects on error.
 	pubsub := app.redisConnection.Subscribe(ctx, myChannel)
@@ -81,6 +80,7 @@ func (app *app) subscribeToRedis() {
 }
 
 // produce message to the kafka channel
+// subscribe to the redis channel and produce it to kafka
 func (app *app) produceToKafka() {
 
 	// There is no error because go-redis automatically reconnects on error.
@@ -104,7 +104,6 @@ func (app *app) produceToKafka() {
 			app.errorlogger.Println("Unable to unmarshal message:", err)
 			continue
 		}
-		fmt.Println("From Redis subscribed value is: ", message)
 
 		// publish to Kafka broker
 		err = app.kafkaProducer.WriteMessages(context.Background(), kafka.Message{
@@ -114,8 +113,41 @@ func (app *app) produceToKafka() {
 		if err != nil {
 			app.errorlogger.Println("Unable to produce to kafka", err)
 		} else {
-			app.infologger.Println("MESSAGE SENT: ", message.Payload)
+			app.infologger.Println("message produced to kafka", message.Payload)
 		}
+	}
+
+}
+
+// consume from kafka and save to the database
+func (app *app) consumeFromKafka() {
+
+	for {
+		consumedMessage, err := app.kafkaConsumer.ReadMessage(context.Background())
+		if err != nil {
+			app.errorlogger.Println("Could not read message: ", err)
+		} else {
+			app.infologger.Println("message comnsumed from kafka", consumedMessage.Value)
+		}
+
+		this := string(consumedMessage.Value[0])
+		fmt.Printf("THIS %s", this)
+
+		/*
+			messageToSave := model.Message{
+				Msg: string(consumedMessage.Value),
+			}
+
+			err = app.messageController.InsertMessage(&messageToSave)
+			if err != nil {
+				// send json response also here
+				//
+				//
+				app.errorlogger.Println("unable to save the consumed messsage into the database")
+			}
+		*/
+
+		app.infologger.Println("consumed message saved into db successfully")
 	}
 
 }
