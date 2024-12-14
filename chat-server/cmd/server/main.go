@@ -32,7 +32,7 @@ var (
 		},
 	}
 
-	myChannel = "common-room"
+	myChannel = "common-room-new"
 
 	ctx = context.Background()
 
@@ -48,7 +48,7 @@ var (
 	// kafka Channel
 	kafkaChannel = make(chan string)
 
-	TOPIC_NAME   = "COMMON"
+	TOPIC_NAME   = "COMMON-NEW"
 	producer     *kafka.Writer
 	consumer     *kafka.Reader
 	kafkaUrl     = "kafka-my-chat-system-particleasw123-2262.c.aivencloud.com:15563"
@@ -100,13 +100,9 @@ func main() {
 	}
 
 	go app.publishToRedis()
-	//	go app.subscribeToRedis()
+	go app.subscribeToRedis()
 	go app.broadcastMessages()
-
-	go func() {
-		log.Println("HEY HEY!!!produceToKafka called first time from main function here")
-		app.produceToKafka()
-	}()
+	go app.produceToKafka()
 
 	// start the server
 	port := fmt.Sprintf(":%s", "1316")
@@ -139,6 +135,7 @@ func createDbConnectionPool(dsn string) (*gorm.DB, error) {
 	return dbConnectionPool, nil
 }
 
+// authenticate with kafka server instance
 func kafkaInitialize() (*kafka.Dialer, error) {
 	err := godotenv.Load()
 	if err != nil {
