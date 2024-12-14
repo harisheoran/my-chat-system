@@ -19,6 +19,12 @@ type app struct {
 	redisConnection   *redis.Client
 	messageController postgre.MessageController
 	kafkaProducer     *kafka.Writer
+	appConfig         *AppConfig
+}
+
+type AppConfig struct {
+	port int
+	env  string
 }
 
 type Message struct {

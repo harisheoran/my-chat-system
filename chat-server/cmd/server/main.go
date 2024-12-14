@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,6 +22,8 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
+
+const version = "1.0.0"
 
 var (
 	upgrader = websocket.Upgrader{
@@ -56,7 +59,7 @@ var (
 )
 
 func main() {
-	// create two loggers for info and error
+	// create two loggers for info and error logs
 	errorlogger := log.New(os.Stderr, "ERROR ", log.Ldate|log.Ltime)
 	infologger := log.New(os.Stdout, "INFO ", log.Ldate|log.Ltime|log.Lshortfile)
 
@@ -65,18 +68,20 @@ func main() {
 	if err != nil {
 		errorlogger.Println("can't read the env files")
 	}
-	dsn := os.Getenv("DBURI")
 
 	// create database connection pool
+	dsn := os.Getenv("DBURI")
 	databaseConnection, err := createDbConnectionPool(dsn)
 	if err != nil {
-		errorlogger.Println("unable to get a database connection from the pool")
+		errorlogger.Println("unable to get a database connection from the pool ", err)
 	}
 
-	// establish the redis connection
+	/*
+	  establish the redis connection
+	*/
 	redis_db, err := strconv.ParseInt(os.Getenv("REDIS_DB"), 2, 64)
 	if err != nil {
-		errorlogger.Println("unable to parse the redis db value from .env file")
+		errorlogger.Println("unable to parse the redis db value from .env file ", err)
 	}
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     os.Getenv("REDIS_ADDRESS"),
@@ -89,6 +94,17 @@ func main() {
 		errorlogger.Println("unable to connect to redis", err)
 	}
 
+	// Command line flag for port for runtime
+	// create apiConfig object
+	apiConfig := AppConfig{}
+	flag.IntVar(&apiConfig.port, "port", 1316, "runtime port for the api")
+	flag.StringVar(&apiConfig.env, "env", "test", "runtime environment name")
+	flag.Parse()
+
+	/*
+		Create app object
+		Role: to share common dependencies across whole API
+	*/
 	app := app{
 		infologger:      infologger,
 		errorlogger:     errorlogger,
@@ -97,15 +113,17 @@ func main() {
 			DbConnection: databaseConnection,
 		},
 		kafkaProducer: createProducer(),
+		appConfig:     &apiConfig,
 	}
 
+	// start the chat workflow
 	go app.publishToRedis()
 	go app.subscribeToRedis()
 	go app.broadcastMessages()
 	go app.produceToKafka()
 
 	// start the server
-	port := fmt.Sprintf(":%s", "1316")
+	port := fmt.Sprintf(":%d", apiConfig.port)
 	server := &http.Server{
 		Addr:     port,
 		ErrorLog: app.errorlogger,

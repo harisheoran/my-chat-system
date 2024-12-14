@@ -1,0 +1,4 @@
+.air.toml
+./tmp/*
+chat-server/bin/*
+chat-server/.env

@@ -2,9 +2,15 @@
 Scaleable personal chat system
 
 ## Connect to my instance
+Visit https://chat.harisheoran.xyz/
+
+OR
 ```
-wscat -c http://13.203.105.149:1316/v1/chat
+wscat -c https://chat.harisheoran.xyz/
 ```
+
+Test Deployments
+- http://13.203.105.149:1317/v1/home
 
 ### How to set up?
 - Install [***wscat***](https://github.com/websockets/wscat) tool
