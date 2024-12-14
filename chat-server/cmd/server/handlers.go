@@ -2,9 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"text/template"
 
@@ -18,20 +16,26 @@ Handlers for all the routes present in routes.go file
 */
 
 func (app *app) healthHandler(w http.ResponseWriter, request *http.Request) {
-	fmt.Fprintf(w, "my chat system's health is OK!. %s", app.appConfig.env, version)
+	healthResponse := map[string]string{
+		"message": "Health is Ok!",
+		"env":     app.appConfig.env,
+		"version": version,
+	}
+	app.sendJSON(w, http.StatusOK, healthResponse)
 }
 
 // main chat handler which upgrade http / https connection to web socket
 func (app *app) chatHandler(w http.ResponseWriter, request *http.Request) {
 	webSocketConnection, err := upgrader.Upgrade(w, request, nil)
 	if err != nil {
-		log.Println("ERROR: upgrading the connection to web socket", err)
+		app.errorlogger.Println("ERROR: upgrading the connection to web socket", err)
+		app.internalServerErrorJSONResponse(w)
 		return
 	}
 
 	app.infologger.Println("connection upgraded to Web Socket")
 
-	//defer webSocketConnection.Close()
+	defer webSocketConnection.Close()
 
 	client[webSocketConnection] = true
 
@@ -42,7 +46,8 @@ func (app *app) chatHandler(w http.ResponseWriter, request *http.Request) {
 			var message Message
 			mt, messageByte, err := connection.ReadMessage()
 			if err != nil {
-				log.Printf("ERROR: Unable to read the message from client %v: %v", webSocketConnection.RemoteAddr(), err)
+				app.errorlogger.Printf("ERROR: Unable to read the message from client %v: %v", webSocketConnection.RemoteAddr(), err)
+				app.internalServerErrorJSONResponse(w)
 				delete(client, connection)
 				return
 			}
