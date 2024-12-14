@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -22,6 +23,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const version = "1.0.0"
+
 var (
 	upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -32,9 +35,9 @@ var (
 		},
 	}
 
-	myChannel = "common-room"
-
-	ctx = context.Background()
+	// redis channel
+	myChannel = "common-room-new"
+	ctx       = context.Background()
 
 	//This map keeps track of connected WebSocket clients.
 	client = make(map[*websocket.Conn]bool)
@@ -48,11 +51,11 @@ var (
 	// kafka Channel
 	kafkaChannel = make(chan string)
 
-	TOPIC_NAME   = "COMMON"
-	producer     *kafka.Writer
-	consumer     *kafka.Reader
-	kafkaUrl     = "kafka-my-chat-system-particleasw123-2262.c.aivencloud.com:15563"
-	triggerCount = 0
+	// for kafka
+	TOPIC_NAME = "COMMON-NEW"
+	producer   *kafka.Writer
+	consumer   *kafka.Reader
+	kafkaUrl   = "kafka-my-chat-system-particleasw123-2262.c.aivencloud.com:15563"
 )
 
 func main() {
@@ -73,7 +76,9 @@ func main() {
 		errorlogger.Println("unable to get a database connection from the pool", err)
 	}
 
-	// establish the redis connection
+	/*
+		establish the redis connection
+	*/
 	redis_db, err := strconv.ParseInt(os.Getenv("REDIS_DB"), 2, 64)
 	if err != nil {
 		errorlogger.Println("unable to parse the redis db value from .env file")
@@ -89,6 +94,12 @@ func main() {
 		errorlogger.Println("unable to connect to redis", err)
 	}
 
+	// Runtime api configs
+	appConfig := AppConfig{}
+	flag.IntVar(&appConfig.port, "port", 1316, "runtime port for the api")
+	flag.StringVar(&appConfig.env, "env", "test", "runtime environment name")
+	flag.Parse()
+
 	app := app{
 		infologger:      infologger,
 		errorlogger:     errorlogger,
@@ -100,19 +111,17 @@ func main() {
 			DbConnection: databaseConnection,
 		},
 		kafkaProducer: createProducer(),
+		appConfig:     &appConfig,
 	}
 
+	// start the chat worflow
 	go app.publishToRedis()
-	//	go app.subscribeToRedis()
+	go app.subscribeToRedis()
 	go app.broadcastMessages()
-
-	go func() {
-		log.Println("HEY HEY!!!produceToKafka called first time from main function here")
-		app.produceToKafka()
-	}()
+	go app.produceToKafka()
 
 	// start the server
-	port := fmt.Sprintf(":%s", "1316")
+	port := fmt.Sprintf(":%d", app.appConfig.port)
 	server := &http.Server{
 		Addr:     port,
 		ErrorLog: app.errorlogger,
