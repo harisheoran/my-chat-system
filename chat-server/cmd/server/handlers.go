@@ -35,8 +35,6 @@ func (app *app) chatHandler(w http.ResponseWriter, request *http.Request) {
 
 	app.infologger.Println("connection upgraded to Web Socket")
 
-	defer webSocketConnection.Close()
-
 	client[webSocketConnection] = true
 
 	// read the message and pass the message payload to publishChannel
