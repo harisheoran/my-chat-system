@@ -28,6 +28,20 @@ func (app *app) sendJSON(w http.ResponseWriter, statusCode int, data interface{}
 	return nil
 }
 
+func (app *app) readJSON(request *http.Request, target interface{}) error {
+
+	err := json.NewDecoder(request.Body).Decode(&target)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/*
+Error JSON response helpers
+*/
+
 // server error response in JSON
 func (app *app) serverErrorJsonResponse(w http.ResponseWriter, statusCode int, data interface{}) {
 	app.errorlogger.Println(data)
