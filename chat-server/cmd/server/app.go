@@ -20,6 +20,12 @@ type app struct {
 	messageController postgre.MessageController
 	userController    postgre.UserController
 	kafkaProducer     *kafka.Writer
+	appConfig         *AppConfig
+}
+
+type AppConfig struct {
+	port int
+	env  string
 }
 
 type Message struct {

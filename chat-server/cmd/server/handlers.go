@@ -18,7 +18,7 @@ Handlers for all the routes present in routes.go file
 */
 
 func (app *app) healthHandler(w http.ResponseWriter, request *http.Request) {
-	fmt.Fprintf(w, "my chat system's health is OK!.")
+	fmt.Fprintf(w, "my chat system's health is OK!. %s", app.appConfig.env, version)
 }
 
 // main chat handler which upgrade http / https connection to web socket
