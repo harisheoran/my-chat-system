@@ -6,6 +6,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/harisheoran/my-chat-system/pkg/model"
 )
@@ -202,4 +203,46 @@ func (app *app) messageHistoryHandler(w http.ResponseWriter, request *http.Reque
 		app.errorlogger.Println("unable to retrieve the message history ", err)
 		// send internal server error response
 	}
+}
+
+func (app *app) addOnlineUser(w http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+	userID := vars["userId"]
+
+	go app.addToOnlineUsers(userID)
+
+	sendJSONResponse(w, http.StatusOK, SuccessResponse{
+		Message: "user added to online list",
+		Data:    nil,
+	})
+}
+
+func (app *app) removeOnlineUser(w http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+	userID := vars["userId"]
+
+	go app.removeFromOnlineUsers(userID)
+
+	sendJSONResponse(w, http.StatusOK, SuccessResponse{
+		Message: "user removed from online list",
+		Data:    nil,
+	})
+}
+
+func (app *app) getOnlineUsersCount(w http.ResponseWriter, request *http.Request) {
+	count, err := app.countOnlineUsers()
+
+	if err != nil {
+		sendJSONResponse(w, http.StatusInternalServerError, ErrorResponse{
+			Error:   "internal_server_error",
+			Message: "Internal Server Error",
+		})
+		return
+	}
+
+	sendJSONResponse(w, http.StatusOK, SuccessResponse{
+		Message: "user added to online list",
+		Data:    count,
+	})
+
 }

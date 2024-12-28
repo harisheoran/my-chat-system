@@ -23,6 +23,9 @@ func (app *app) router() http.Handler {
 	appRouter.HandleFunc("/chat", app.chatHandler)
 	appRouter.HandleFunc("/logout", app.logoutHandler)
 	appRouter.Use(app.CheckAutheticationMiddleware)
+	mainRouter.HandleFunc("/v1/online-users/add/{userId}", app.addOnlineUser).Methods("POST")
+	mainRouter.HandleFunc("/v1/online-users/remove/{userId}", app.removeOnlineUser).Methods("POST")
+	mainRouter.HandleFunc("/v1/online-users/get-count", app.getOnlineUsersCount).Methods("GET")
 
 	return mainRouter
 }
