@@ -163,3 +163,15 @@ func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
 		})
 	}
 }
+
+/*
+message history handler
+*/
+func (app *app) messageHistoryHandler(w http.ResponseWriter, request *http.Request) {
+	err := app.messageHistory()
+
+	if err != nil {
+		app.errorlogger.Println("unable to retrieve the message history ", err)
+		// send internal server error response
+	}
+}

@@ -16,9 +16,17 @@ type User struct {
 	CreatedAt time.Time
 }
 
-type Message struct {
+type Channel struct {
 	gorm.Model
 	ID   uint   `gorm:"primaryKey"`
-	Msg  string `json:"message"`
-	Time time.Time
+	Name string `json:"name"`
+}
+
+type Message struct {
+	gorm.Model
+	ID        uint `gorm:"primaryKey"`
+	UserId    uint
+	ChannelId uint
+	Data      string `json:"message"`
+	CreatedAt time.Time
 }

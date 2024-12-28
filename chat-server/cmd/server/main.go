@@ -120,7 +120,7 @@ func main() {
 	go app.subscribeToRedis()
 	go app.broadcastMessages()
 	go app.produceToKafka()
-	//	go app.consumeFromKafka()
+	go app.consumeFromKafka()
 
 	// start the server
 	port := fmt.Sprintf(":%d", app.appConfig.port)
@@ -221,9 +221,14 @@ func createKafkaConsumer() *kafka.Reader {
 
 	// init consumer
 	consumer := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{kafkaUrl},
-		Topic:   TOPIC_NAME,
-		Dialer:  dialer,
+		Brokers:        []string{kafkaUrl},
+		Topic:          TOPIC_NAME,
+		GroupID:        "main-chat-consumer-group",
+		Dialer:         dialer,
+		MinBytes:       10e3,
+		MaxBytes:       10e6,
+		MaxWait:        1 * time.Second,
+		CommitInterval: 0, // no auto-commit
 	})
 
 	return consumer

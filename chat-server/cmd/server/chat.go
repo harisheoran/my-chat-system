@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/harisheoran/my-chat-system/pkg/model"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -119,35 +120,86 @@ func (app *app) produceToKafka() {
 
 }
 
-// consume from kafka and save to the database
+/*
+consume from kafka and save to the database
+*/
 func (app *app) consumeFromKafka() {
+	consumer := app.kafkaConsumer
+	// number of messages per batch
+	batchSize := 5
+
+	// message buffer
+	var batch []kafka.Message
+	//	batchStart := time.Now()
 
 	for {
-		consumedMessage, err := app.kafkaConsumer.ReadMessage(context.Background())
+		consumedMessage, err := consumer.FetchMessage(context.Background())
 		if err != nil {
 			app.errorlogger.Println("Could not read message: ", err)
 		} else {
-			app.infologger.Println("message comnsumed from kafka", consumedMessage.Value)
+			app.infologger.Println("message consumed from kafka", consumedMessage.Value)
 		}
 
-		this := string(consumedMessage.Value[0])
-		fmt.Printf("THIS %s", this)
+		batch = append(batch, consumedMessage)
 
-		/*
-			messageToSave := model.Message{
-				Msg: string(consumedMessage.Value),
-			}
+		if len(batch) >= batchSize {
+			err := app.saveMessageToDatabase(batch)
 
-			err = app.messageController.InsertMessage(&messageToSave)
 			if err != nil {
-				// send json response also here
-				//
-				//
-				app.errorlogger.Println("unable to save the consumed messsage into the database")
-			}
-		*/
+				app.errorlogger.Println("unable to prouduce batch", err)
 
-		app.infologger.Println("consumed message saved into db successfully")
+				// retry here
+				continue
+			}
+
+			// commit after saving message
+			err = consumer.CommitMessages(context.Background(), batch...)
+			if err != nil {
+				app.errorlogger.Println("Unable to commit message after saving to the database")
+			}
+
+			batch = nil
+		}
+
+		app.infologger.Println("CONSUMED: ", string(consumedMessage.Value))
+
+		//app.infologger.Println("consumed message saved into db successfully")
 	}
 
+}
+
+// save message to database
+func (app *app) saveMessageToDatabase(messages []kafka.Message) error {
+
+	fmt.Printf("Processing batch of %d messages\n", len(messages))
+	fmt.Println()
+
+	messagesToSave := []model.Message{}
+
+	for _, value := range messages {
+		messagesToSave = append(messagesToSave, model.Message{Data: string(value.Value)})
+	}
+
+	err := app.messageController.BulkInsertMessage(&messagesToSave)
+	if err != nil {
+		app.errorlogger.Println("Unable to run bulk insert the data into database ", err)
+	}
+	return nil
+}
+
+/*
+Retrieve message from the database
+*/
+func (app *app) messageHistory() error {
+	messages, err := app.messageController.GetLastMessages()
+	if err != nil {
+		app.errorlogger.Println("unable to retrieve the message for history ", err)
+	}
+
+	fmt.Println("DATA is here of length", len(messages))
+	for i, value := range messages {
+		fmt.Println(i, value.Data)
+	}
+
+	return nil
 }
