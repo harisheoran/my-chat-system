@@ -16,6 +16,7 @@ func (app *app) router() http.Handler {
 	mainRouter.HandleFunc("/v1/health", app.healthHandler)
 	mainRouter.HandleFunc("/v1/chat", app.chatHandler)
 	mainRouter.HandleFunc("/v1/auth", app.authHandler).Methods("POST")
+	mainRouter.HandleFunc("/v1/history", app.messageHistoryHandler).Methods("GET")
 
 	return mainRouter
 }
