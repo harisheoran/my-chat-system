@@ -8,12 +8,10 @@ import (
 
 type User struct {
 	gorm.Model
-	ID        uint `gorm:"primaryKey"`
-	Username  string
-	Name      string
-	Email     string `gorm:"unique"`
-	Password  string
-	CreatedAt time.Time
+	ID       uint   `gorm:"primaryKey"`
+	Name     string `json:"name"`
+	Email    string `gorm:"unique"`
+	Password string `json:"password"`
 }
 
 type Channel struct {

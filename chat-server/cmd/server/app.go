@@ -34,3 +34,8 @@ type Message struct {
 	PayloadType int    `json:"PayloadType"`
 	// RemoteAddress string `json:"RemoteAddress"`
 }
+
+type LoginRequestPayload struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}

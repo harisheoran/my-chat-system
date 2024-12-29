@@ -15,3 +15,11 @@ type SuccessResponse struct {
 	Message string `json:"message"`
 	Data    any    `json:"data,omitempty"` // Use `any` for generic data
 }
+
+type NotFoundResponse struct {
+	Message string
+}
+
+type NotAuthorizedResponse struct {
+	Message string
+}

@@ -45,15 +45,16 @@ Error JSON response helpers
 // server error response in JSON
 func (app *app) serverErrorJsonResponse(w http.ResponseWriter, statusCode int, data interface{}) {
 	app.errorlogger.Println(data)
-	err := app.sendJSON(w, statusCode, "")
+	err := app.sendJSON(w, statusCode, data)
 	if err != nil {
 		app.errorlogger.Println("Unable to send internal server error response ", err)
 		w.WriteHeader(500)
 	}
 }
 
-// internal server error response in JSON
-func (app *app) internalServerErrorJSONResponse(w http.ResponseWriter) {
+// send internal server error response in JSON and log the error
+func (app *app) internalServerErrorJSONResponse(w http.ResponseWriter, logMessage string, err error) {
+	app.errorlogger.Println(logMessage, err)
 	message := "The server encountered an Internal Error and could not process the request."
 	app.serverErrorJsonResponse(w, http.StatusInternalServerError, message)
 }
