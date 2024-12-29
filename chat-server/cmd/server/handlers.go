@@ -1,21 +1,22 @@
 package main
 
 import (
-	"encoding/json"
-	"io"
+	"fmt"
 	"net/http"
 	"text/template"
+	"time"
 
 	"github.com/gorilla/websocket"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/harisheoran/my-chat-system/pkg/model"
 )
 
 /*
-Handlers for all the routes present in routes.go file
-- REST handling
+Handlers for all the routes of the API
 */
 
+// health check
 func (app *app) healthHandler(w http.ResponseWriter, request *http.Request) {
+	fmt.Println("HERE")
 	healthResponse := map[string]string{
 		"message": "Health is Ok!",
 		"env":     app.appConfig.env,
@@ -24,16 +25,15 @@ func (app *app) healthHandler(w http.ResponseWriter, request *http.Request) {
 	app.sendJSON(w, http.StatusOK, healthResponse)
 }
 
-// main chat handler which upgrade http / https connection to web socket
+// main chat handler which upgrade http/https connection to web socket connection
 func (app *app) chatHandler(w http.ResponseWriter, request *http.Request) {
 	webSocketConnection, err := upgrader.Upgrade(w, request, nil)
 	if err != nil {
-		app.errorlogger.Println("ERROR: upgrading the connection to web socket", err)
-		app.internalServerErrorJSONResponse(w)
+		app.internalServerErrorJSONResponse(w, " unable to upgrade the connection to web socket", err)
 		return
 	}
 
-	app.infologger.Println("connection upgraded to Web Socket")
+	app.infologger.Println("connection successfully upgraded to Web Socket")
 
 	client[webSocketConnection] = true
 
@@ -44,15 +44,13 @@ func (app *app) chatHandler(w http.ResponseWriter, request *http.Request) {
 			var message Message
 			mt, messageByte, err := connection.ReadMessage()
 			if err != nil {
-				app.errorlogger.Printf("ERROR: Unable to read the message from client %v: %v", webSocketConnection.RemoteAddr(), err)
-				app.internalServerErrorJSONResponse(w)
+				app.internalServerErrorJSONResponse(w, "unable to read the message from web socker client", err)
 				delete(client, connection)
 				return
 			}
 
 			message.Payload = string(messageByte)
 			message.PayloadType = mt
-			//	message.RemoteAddress = connection.RemoteAddr().String()
 
 			publishChannel <- message
 		}
@@ -77,90 +75,120 @@ func (app *app) homeHandler(w http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func (app *app) authHandler(w http.ResponseWriter, request *http.Request) {
-	method := request.Method
-	if method != "POST" {
-		sendJSONResponse(w, http.StatusMethodNotAllowed, ErrorResponse{
-			Error:   "method_not_allowed",
-			Message: "method not allowed",
-		})
-		return
-	}
-
-	reqBodyContent, err := io.ReadAll(request.Body)
+// user sign up
+func (app *app) signupHandler(w http.ResponseWriter, request *http.Request) {
+	user := model.User{}
+	// read the json from request body
+	err := app.readJSON(request, &user)
 	if err != nil {
-		sendJSONResponse(w, http.StatusInternalServerError, ErrorResponse{
-			Error:   err.Error(),
-			Message: "Internal Server Error",
-		})
-		return
+		app.internalServerErrorJSONResponse(w, "unable to read the request payload for user signup ", err)
 	}
-	defer request.Body.Close()
 
-	var requestBody AuthRequestBody
-	err = json.Unmarshal(reqBodyContent, &requestBody)
+	// check user exist or not
+	userExist, err := app.userController.CheckUserExist(user.Email)
 	if err != nil {
-		sendJSONResponse(w, http.StatusInternalServerError, ErrorResponse{
-			Error:   err.Error(),
-			Message: "Internal Server Error",
-		})
+		app.internalServerErrorJSONResponse(w, "failed to query the database", err)
 		return
 	}
 
-	// create hash of password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(requestBody.Password), 10)
+	if userExist {
+		response := NotFoundResponse{
+			"User already exist, please login",
+		}
+		app.sendJSON(w, http.StatusOK, response)
+		return
+	}
+
+	// save the user info
+	err = app.userController.CreateNewUser(user)
 	if err != nil {
-		sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
-			Error:   "bad_request",
-			Message: err.Error(),
-		})
-		return
+		app.internalServerErrorJSONResponse(w, "failed to save the user credentials to the database", err)
 	}
 
-	// check existing user
-	user := app.userController.CheckUserExists(requestBody.Email)
-	if user != nil {
-		// compare password with hashedPassword
-		err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(requestBody.Password))
+	// send success response after signup
+	successResponse := SuccessResponse{
+		Message: "User signed up successfully",
+	}
+	err = app.sendJSON(w, http.StatusOK, successResponse)
+	if err != nil {
+		app.internalServerErrorJSONResponse(w, "failed to send the success response of saving user signup", err)
+	}
+}
+
+// user login handler
+func (app *app) loginHandler(w http.ResponseWriter, request *http.Request) {
+	// decode the request
+	loginPayload := LoginRequestPayload{}
+	err := app.readJSON(request, &loginPayload)
+	if err != nil {
+		app.internalServerErrorJSONResponse(w, "unable to decode the login payload", err)
+	}
+
+	// check the user exists or not
+	userExist, err := app.userController.CheckUserExist(loginPayload.Email)
+	if err != nil {
+		app.internalServerErrorJSONResponse(w, "failed to check the existing user", err)
+	}
+	if !userExist {
+		err = app.sendJSON(w, http.StatusNotFound, NotFoundResponse{
+			Message: "User does not exist",
+		})
 		if err != nil {
-			sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
-				Error:   "bad_request",
-				Message: err.Error(),
-			})
-			return
-		}
-		if userMap, ok := user.(map[string]interface{}); ok {
-			username := userMap["username"].(string)
-			email := userMap["email"].(string)
-			sendJSONResponse(w, http.StatusBadRequest, SuccessResponse{
-				Message: "user found",
-				Data: map[string]interface{}{
-					"username": username,
-					"email":    email,
-					"type":     "login",
-				},
-			})
-		} else {
-			sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
-				Error:   "bad_request",
-				Message: "Internal Server Error",
-			})
+			app.internalServerErrorJSONResponse(w, "failed to send json response", err)
 		}
 		return
-	} else {
-		// create new user
-		user, err := app.userController.CreateNewUser(requestBody.Name, requestBody.Email, string(requestBody.Password))
-		if err != nil {
-			sendJSONResponse(w, http.StatusBadRequest, ErrorResponse{
-				Error:   "bad_request",
-				Message: err.Error(),
-			})
-			return
-		}
-		sendJSONResponse(w, http.StatusCreated, SuccessResponse{
-			Message: "user created",
-			Data:    user,
+	}
+
+	// check the authenticty of payload credentials
+	userId, err := app.userController.Authenticate(loginPayload.Email, loginPayload.Password)
+	if err != nil || userId < 0 {
+		err := app.sendJSON(w, http.StatusNotFound, NotFoundResponse{
+			Message: "User Email or Password does not match.",
 		})
+		if err != nil {
+			app.internalServerErrorJSONResponse(w, "failed to send json response", err)
+		}
+	}
+
+	// create JWT token and send to the client
+	expirationTime := time.Now().Add(5 * time.Minute)
+	token, err := app.createJwtToken(userId, expirationTime)
+	if err != nil {
+		app.internalServerErrorJSONResponse(w, "failed to sign the JWT Token", err)
+	}
+
+	// set a jwt token cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   token,
+		Expires: expirationTime,
+		Secure:  false,
+		Path:    "/",
+	})
+
+	// send successfull login response
+	err = app.sendJSON(w, http.StatusOK, SuccessResponse{
+		Message: "Login succeeded",
+	})
+	if err != nil {
+		app.internalServerErrorJSONResponse(w, "failed to send json response", err)
+	}
+}
+
+// logout handler
+func (app *app) logoutHandler(w http.ResponseWriter, request *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   "",
+		Expires: time.Now(),
+		Secure:  false,
+		Path:    "/",
+	})
+	err := app.sendJSON(w, http.StatusOK, SuccessResponse{
+		Message: "Logout successfully",
+	})
+	if err != nil {
+		app.internalServerErrorJSONResponse(w, "failed to send json response", err)
 	}
 }
 
