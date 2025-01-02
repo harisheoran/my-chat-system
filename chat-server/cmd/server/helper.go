@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 )
 
 /*
@@ -57,4 +58,24 @@ func (app *app) internalServerErrorJSONResponse(w http.ResponseWriter, logMessag
 	app.errorlogger.Println(logMessage, err)
 	message := "The server encountered an Internal Error and could not process the request."
 	app.serverErrorJsonResponse(w, http.StatusInternalServerError, message)
+}
+
+// get userId of logged in user from cookie
+func (app *app) getUserIdFromCookie(request *http.Request) (int, error) {
+	cookie, err := request.Cookie("userId")
+
+	if err != nil {
+		if err == http.ErrNoCookie {
+			return -1, cookieNotFoundError
+		}
+
+		return -1, err
+	}
+
+	userId, err := strconv.ParseInt(cookie.Value, 10, 64)
+	if err != nil {
+		return -1, err
+	}
+
+	return int(userId), nil
 }

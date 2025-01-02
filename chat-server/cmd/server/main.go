@@ -104,10 +104,13 @@ func main() {
 		infologger:      infologger,
 		errorlogger:     errorlogger,
 		redisConnection: rdb,
-		messageController: postgre.MessageController{
+		messageController: &postgre.MessageController{
 			DbConnection: databaseConnection,
 		},
-		userController: postgre.UserController{
+		userController: &postgre.UserController{
+			DbConnection: databaseConnection,
+		},
+		channelController: &postgre.ChannelController{
 			DbConnection: databaseConnection,
 		},
 		kafkaProducer: createKafkaProducer(),
@@ -146,7 +149,7 @@ func createDbConnectionPool(dsn string) (*gorm.DB, error) {
 	}
 
 	// Run the automigration for Project Model
-	if err := dbConnectionPool.AutoMigrate(&model.Message{}, &model.User{}); err != nil {
+	if err := dbConnectionPool.AutoMigrate(&model.Message{}, &model.User{}, &model.Channel{}); err != nil {
 		return nil, err
 	}
 
