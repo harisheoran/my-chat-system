@@ -30,7 +30,7 @@ func (app *app) broadcastMessages() {
 		}
 
 		for clientConnection := range client {
-			err := clientConnection.WriteMessage(message.PayloadType, []byte(message.Payload))
+			err := clientConnection.WriteMessage(message.PayloadType, []byte(message.Data))
 			if err != nil {
 				app.errorlogger.Println("unable to broadcast the message", err)
 				clientConnection.Close()
@@ -50,6 +50,7 @@ func (app *app) publishToRedis() {
 		if err != nil {
 			app.errorlogger.Println("unable top marshal the payload json")
 		}
+
 		err = app.redisConnection.Publish(ctx, myChannel, payloadJson).Err()
 		if err != nil {
 			panic(err)
@@ -99,22 +100,15 @@ func (app *app) produceToKafka() {
 			app.infologger.Println("message subscribed from redis for kafka")
 		}
 
-		var message Message
-		err = json.Unmarshal([]byte(msg.Payload), &message)
-		if err != nil {
-			app.errorlogger.Println("Unable to unmarshal message:", err)
-			continue
-		}
-
 		// publish to Kafka broker
 		err = app.kafkaProducer.WriteMessages(context.Background(), kafka.Message{
 			Key:   []byte(fmt.Sprintf("message-%s", time.Now().Format("2006-01-02"))),
-			Value: []byte(message.Payload),
+			Value: []byte(msg.Payload),
 		})
 		if err != nil {
 			app.errorlogger.Println("Unable to produce to kafka", err)
 		} else {
-			app.infologger.Println("message produced to kafka", message.Payload)
+			app.infologger.Println("message produced to kafka")
 		}
 	}
 
@@ -130,7 +124,6 @@ func (app *app) consumeFromKafka() {
 
 	// message buffer
 	var batch []kafka.Message
-	//	batchStart := time.Now()
 
 	for {
 		consumedMessage, err := consumer.FetchMessage(context.Background())
@@ -170,6 +163,7 @@ func (app *app) consumeFromKafka() {
 
 // save message to database
 func (app *app) saveMessageToDatabase(messages []kafka.Message) error {
+	message := model.Message{}
 
 	fmt.Printf("Processing batch of %d messages\n", len(messages))
 	fmt.Println()
@@ -177,7 +171,11 @@ func (app *app) saveMessageToDatabase(messages []kafka.Message) error {
 	messagesToSave := []model.Message{}
 
 	for _, value := range messages {
-		messagesToSave = append(messagesToSave, model.Message{Data: string(value.Value)})
+		err := json.Unmarshal(value.Value, &message)
+		if err != nil {
+			return err
+		}
+		messagesToSave = append(messagesToSave, message)
 	}
 
 	err := app.messageController.BulkInsertMessage(&messagesToSave)

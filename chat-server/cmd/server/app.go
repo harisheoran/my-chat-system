@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	postgre "github.com/harisheoran/my-chat-system/pkg/model/postgre"
 	"github.com/redis/go-redis/v9"
@@ -17,8 +18,9 @@ type app struct {
 	infologger        *log.Logger
 	errorlogger       *log.Logger
 	redisConnection   *redis.Client
-	messageController postgre.MessageController
-	userController    postgre.UserController
+	messageController *postgre.MessageController
+	userController    *postgre.UserController
+	channelController *postgre.ChannelController
 	kafkaProducer     *kafka.Writer
 	kafkaConsumer     *kafka.Reader
 	appConfig         *AppConfig
@@ -30,9 +32,11 @@ type AppConfig struct {
 }
 
 type Message struct {
-	Payload     string `json:"Payload"`
-	PayloadType int    `json:"PayloadType"`
-	// RemoteAddress string `json:"RemoteAddress"`
+	PayloadType int
+	UserId      uint
+	ChannelId   uint
+	Data        string `json:"message"`
+	CreatedAt   time.Time
 }
 
 type LoginRequestPayload struct {
