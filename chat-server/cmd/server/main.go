@@ -55,7 +55,7 @@ var (
 	TOPIC_NAME = "COMMON-NEW"
 	producer   *kafka.Writer
 	consumer   *kafka.Reader
-	kafkaUrl   = "kafka-my-chat-system-particleasw123-2262.c.aivencloud.com:15563"
+	kafkaUrl   = "kafka-15e11ee5-project-54d1.c.aivencloud.com:25415"
 )
 
 func main() {
