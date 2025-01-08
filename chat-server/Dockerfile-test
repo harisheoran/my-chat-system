@@ -20,6 +20,6 @@ COPY --from=build /app/ca.pem /app/ca.pem
 
 RUN chmod +x /app/bin/my-chat-system-server
 
-EXPOSE 1316
+EXPOSE 1318
 
 ENTRYPOINT [ "/app/bin/my-chat-system-server" ]
