@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/harisheoran/my-chat-system/internal/filter"
 	"github.com/harisheoran/my-chat-system/pkg/model"
 	"github.com/segmentio/kafka-go"
 )
@@ -156,7 +157,7 @@ func (app *app) consumeFromKafka() {
 
 		app.infologger.Println("CONSUMED: ", string(consumedMessage.Value))
 
-		//app.infologger.Println("consumed message saved into db successfully")
+		app.infologger.Println("consumed message saved into db successfully")
 	}
 
 }
@@ -188,16 +189,12 @@ func (app *app) saveMessageToDatabase(messages []kafka.Message) error {
 /*
 Retrieve message from the database
 */
-func (app *app) messageHistory() error {
-	messages, err := app.messageController.GetLastMessages()
+func (app *app) messageHistory(filter filter.Filter) ([]model.Message, error) {
+	messages, err := app.messageController.GetMessages(filter)
 	if err != nil {
 		app.errorlogger.Println("unable to retrieve the message for history ", err)
+		return messages, err
 	}
 
-	fmt.Println("DATA is here of length", len(messages))
-	for i, value := range messages {
-		fmt.Println(i, value.Data)
-	}
-
-	return nil
+	return messages, nil
 }

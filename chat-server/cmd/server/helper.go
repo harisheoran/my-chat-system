@@ -3,7 +3,10 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strconv"
+
+	"github.com/harisheoran/my-chat-system/internal/validator"
 )
 
 /*
@@ -15,7 +18,7 @@ func sendJSONResponse(w http.ResponseWriter, statusCode int, response any) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// send json responsei
+// send json response
 func (app *app) sendJSON(w http.ResponseWriter, statusCode int, data interface{}) error {
 	jsonData, err := json.MarshalIndent(data, "", "\t")
 	if err != nil {
@@ -29,6 +32,7 @@ func (app *app) sendJSON(w http.ResponseWriter, statusCode int, data interface{}
 	return nil
 }
 
+// read the JSON from the request and convert JSON into GO objects
 func (app *app) readJSON(request *http.Request, target interface{}) error {
 
 	err := json.NewDecoder(request.Body).Decode(&target)
@@ -39,25 +43,21 @@ func (app *app) readJSON(request *http.Request, target interface{}) error {
 	return nil
 }
 
-/*
-Error JSON response helpers
-*/
+// read the query parameters from request
+func (app *app) readPaginationParameters(queryString url.Values, key string, defaultValue int, validator *validator.Validator) int {
+	value := queryString.Get(key)
 
-// server error response in JSON
-func (app *app) serverErrorJsonResponse(w http.ResponseWriter, statusCode int, data interface{}) {
-	app.errorlogger.Println(data)
-	err := app.sendJSON(w, statusCode, data)
-	if err != nil {
-		app.errorlogger.Println("Unable to send internal server error response ", err)
-		w.WriteHeader(500)
+	if value == "" {
+		return defaultValue
 	}
-}
 
-// send internal server error response in JSON and log the error
-func (app *app) internalServerErrorJSONResponse(w http.ResponseWriter, logMessage string, err error) {
-	app.errorlogger.Println(logMessage, err)
-	message := "The server encountered an Internal Error and could not process the request."
-	app.serverErrorJsonResponse(w, http.StatusInternalServerError, message)
+	i, err := strconv.Atoi(value)
+	if err != nil {
+		validator.AddError(key, "must be an integar value")
+		return defaultValue
+	}
+
+	return i
 }
 
 // get userId of logged in user from cookie
@@ -78,4 +78,37 @@ func (app *app) getUserIdFromCookie(request *http.Request) (int, error) {
 	}
 
 	return int(userId), nil
+}
+
+/*
+Error JSON response helpers
+*/
+
+func (app *app) errorResponse(w http.ResponseWriter, request *http.Request, statusCode int, errors map[string]string) {
+
+	// send response to user
+	app.sendJSON(w, statusCode, errors)
+
+}
+
+// server error response in JSON
+func (app *app) serverErrorJsonResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	app.errorlogger.Println(data)
+	err := app.sendJSON(w, statusCode, data)
+	if err != nil {
+		app.errorlogger.Println("Unable to send internal server error response ", err)
+		w.WriteHeader(500)
+	}
+}
+
+// send internal server error response in JSON and log the error
+func (app *app) internalServerErrorJSONResponse(w http.ResponseWriter, logMessage string, err error) {
+	app.errorlogger.Println(logMessage, err)
+	message := "The server encountered an Internal Error and could not process the request."
+	app.serverErrorJsonResponse(w, http.StatusInternalServerError, message)
+}
+
+// send failed validation error message
+func (app *app) failedValidationResponse(w http.ResponseWriter, request *http.Request, errors map[string]string) {
+	app.errorResponse(w, request, http.StatusUnprocessableEntity, errors)
 }
