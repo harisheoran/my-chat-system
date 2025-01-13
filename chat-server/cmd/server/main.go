@@ -52,7 +52,7 @@ var (
 	kafkaChannel = make(chan string)
 
 	// for kafka
-	TOPIC_NAME = "COMMON-NEW"
+	TOPIC_NAME = "TEST"
 	producer   *kafka.Writer
 	consumer   *kafka.Reader
 	kafkaUrl   = "kafka-15e11ee5-project-54d1.c.aivencloud.com:25415"

@@ -20,7 +20,7 @@ func (app *app) router() http.Handler {
 	appRouter := mainRouter.PathPrefix("/v1").Subrouter()
 	appRouter.HandleFunc("/history", app.messageHistoryHandler).Methods("GET")
 	appRouter.HandleFunc("/home", app.homeHandler)
-	appRouter.HandleFunc("/channel/{channelid}", app.groupChatHandler)
+	mainRouter.HandleFunc("/channel/{channelid}", app.groupChatHandler)
 	appRouter.HandleFunc("/logout", app.logoutHandler).Methods("GET")
 	appRouter.HandleFunc("/create-channel", app.createChannelHandler).Methods("POST")
 	appRouter.HandleFunc("/online-users/add/{userId}", app.addOnlineUser).Methods("POST")

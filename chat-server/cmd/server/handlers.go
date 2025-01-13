@@ -9,6 +9,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/harisheoran/my-chat-system/internal/filter"
+	"github.com/harisheoran/my-chat-system/internal/validator"
 	"github.com/harisheoran/my-chat-system/pkg/model"
 )
 
@@ -101,12 +103,36 @@ func (app *app) homeHandler(w http.ResponseWriter, request *http.Request) {
 message history handler
 */
 func (app *app) messageHistoryHandler(w http.ResponseWriter, request *http.Request) {
-	err := app.messageHistory()
+	v := validator.New()
 
+	// get parameters from the request
+	page := app.readPaginationParameters(request.URL.Query(), "page", 1, v)
+	pageSize := app.readPaginationParameters(request.URL.Query(), "page_size", 10, v)
+
+	// check validation on page and page size
+	v.Check(page > 0, "page", "must be greatar than 0")
+	v.Check(pageSize > 0, "page_size", "must be greatar than 0")
+	if !v.Valid() {
+		app.failedValidationResponse(w, request, v.Errors)
+		return
+	}
+
+	// create filter for pagination
+	filter := filter.Filter{
+		Page:     page,
+		PageSize: pageSize,
+	}
+
+	// get messages from the database
+	messagesList, err := app.messageHistory(filter)
 	if err != nil {
 		app.errorlogger.Println("unable to retrieve the message history ", err)
-		// send internal server error response
+		app.internalServerErrorJSONResponse(w, "unable to retreive the message for history", err)
 	}
+
+	// send messsage list to the client
+	app.sendJSON(w, http.StatusOK, messagesList)
+
 }
 
 func (app *app) addOnlineUser(w http.ResponseWriter, request *http.Request) {

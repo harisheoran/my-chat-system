@@ -2,6 +2,8 @@ package postgre
 
 import (
 	"github.com/harisheoran/my-chat-system/pkg/model"
+
+	"github.com/harisheoran/my-chat-system/internal/filter"
 	"gorm.io/gorm"
 )
 
@@ -19,9 +21,9 @@ func (mc *MessageController) BulkInsertMessage(messages *[]model.Message) error 
 	return nil
 }
 
-func (mc *MessageController) GetLastMessages() ([]model.Message, error) {
+func (mc *MessageController) GetMessages(filter filter.Filter) ([]model.Message, error) {
 	var messages = []model.Message{}
-	result := mc.DbConnection.Order("created_at desc").Limit(20).Find(&messages)
+	result := mc.DbConnection.Order("created_at desc").Limit(filter.Limit()).Offset(filter.Offset()).Find(&messages)
 
 	if result.Error != nil {
 		return messages, result.Error
