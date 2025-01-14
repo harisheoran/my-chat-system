@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 /*
@@ -20,14 +21,20 @@ func (app *app) router() http.Handler {
 	appRouter := mainRouter.PathPrefix("/v1").Subrouter()
 	appRouter.HandleFunc("/history", app.messageHistoryHandler).Methods("GET")
 	appRouter.HandleFunc("/home", app.homeHandler)
-	mainRouter.HandleFunc("/channel/{channelid}", app.groupChatHandler)
+	appRouter.HandleFunc("/channel/{channelid}", app.groupChatHandler)
 	appRouter.HandleFunc("/logout", app.logoutHandler).Methods("GET")
 	appRouter.HandleFunc("/create-channel", app.createChannelHandler).Methods("POST")
 	appRouter.HandleFunc("/online-users/add/{userId}", app.addOnlineUser).Methods("POST")
 	appRouter.HandleFunc("/online-users/remove/{userId}", app.removeOnlineUser).Methods("POST")
 	appRouter.HandleFunc("/online-users/get-count", app.getOnlineUsersCount).Methods("GET")
 
-	appRouter.Use(app.CheckAutheticationMiddleware)
+	c := cors.New(cors.Options{
+		AllowCredentials: true,
+		AllowedMethods:   []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete, http.MethodOptions},
+		AllowedHeaders:   []string{"Content-Type, Authorization"},
+	})
 
-	return mainRouter
+	corsHandler := c.Handler(mainRouter)
+
+	return corsHandler
 }
