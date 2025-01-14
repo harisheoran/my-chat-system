@@ -52,3 +52,22 @@ func (app *app) CheckAutheticationMiddleware(handler http.Handler) http.Handler 
 
 	return http.HandlerFunc(nextHandler)
 }
+
+// CORS middleware
+func (app *app) corsMiddleware(nextHandler http.Handler) http.Handler {
+
+	handler := func(w http.ResponseWriter, request *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*") // Allow all origins
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if request.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		nextHandler.ServeHTTP(w, request)
+	}
+
+	return http.HandlerFunc(handler)
+}
