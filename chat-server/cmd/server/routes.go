@@ -29,7 +29,10 @@ func (app *app) router() http.Handler {
 	appRouter.HandleFunc("/online-users/get-count", app.getOnlineUsersCount).Methods("GET")
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins: []string{"*"},
+		AllowOriginFunc: func(origin string) bool {
+			return true
+		},
 		AllowCredentials: true,
 		AllowedMethods:   []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete, http.MethodOptions},
 		AllowedHeaders:   []string{"Content-Type, Authorization"},
