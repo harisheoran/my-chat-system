@@ -202,9 +202,22 @@ func (app *app) createChannelHandler(w http.ResponseWriter, request *http.Reques
 	}
 }
 
+// get list of all channels
+func (app *app) getChannels(w http.ResponseWriter, request *http.Request) {
+	channels, err := app.channelController.GetChannels()
+	if err != nil {
+		app.internalServerErrorJSONResponse(w, "failed to retrieve channels list from the database", err)
+	}
+
+	// send channels list to the client
+	err = app.sendJSON(w, http.StatusOK, channels)
+	if err != nil {
+		app.internalServerErrorJSONResponse(w, "unable to send json response", err)
+	}
+}
+
 /*
 TODO: Create the following functionalities
 - Edit channel
 - Delete channl
-- View all the channels
 */
