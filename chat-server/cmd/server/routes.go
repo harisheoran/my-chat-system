@@ -23,6 +23,7 @@ func (app *app) router() http.Handler {
 	appRouter.HandleFunc("/channel/{channelid}", app.groupChatHandler)
 	appRouter.HandleFunc("/logout", app.logoutHandler).Methods("GET")
 	appRouter.HandleFunc("/create-channel", app.createChannelHandler).Methods("POST")
+	appRouter.HandleFunc("/getchannels", app.getChannels).Methods("GET")
 	appRouter.HandleFunc("/online-users/add/{userId}", app.addOnlineUser).Methods("POST")
 	appRouter.HandleFunc("/online-users/remove/{userId}", app.removeOnlineUser).Methods("POST")
 	appRouter.HandleFunc("/online-users/get-count", app.getOnlineUsersCount).Methods("GET")
