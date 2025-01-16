@@ -119,6 +119,7 @@ func (app *app) produceToKafka() {
 consume from kafka and save to the database
 */
 func (app *app) consumeFromKafka() {
+	fmt.Println("Consuming started...")
 	consumer := app.kafkaConsumer
 	// number of messages per batch
 	batchSize := 5
@@ -131,7 +132,7 @@ func (app *app) consumeFromKafka() {
 		if err != nil {
 			app.errorlogger.Println("Could not read message: ", err)
 		} else {
-			app.infologger.Println("message consumed from kafka", consumedMessage.Value)
+			app.infologger.Println("message consumed from kafka")
 		}
 
 		batch = append(batch, consumedMessage)
@@ -146,6 +147,7 @@ func (app *app) consumeFromKafka() {
 				continue
 			}
 
+			app.infologger.Println("commiting messages...")
 			// commit after saving message
 			err = consumer.CommitMessages(context.Background(), batch...)
 			if err != nil {
@@ -153,11 +155,10 @@ func (app *app) consumeFromKafka() {
 			}
 
 			batch = nil
+			app.infologger.Println("Messages are saved into the database.")
 		}
 
-		app.infologger.Println("CONSUMED: ", string(consumedMessage.Value))
-
-		app.infologger.Println("consumed message saved into db successfully")
+		app.infologger.Println("Messages are consumed from kafka topic.")
 	}
 
 }

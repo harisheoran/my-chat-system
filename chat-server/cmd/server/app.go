@@ -24,6 +24,8 @@ type app struct {
 	kafkaProducer     *kafka.Writer
 	kafkaConsumer     *kafka.Reader
 	appConfig         *AppConfig
+	kafkaUrl          string
+	jwtSecretKey      string
 }
 
 type AppConfig struct {

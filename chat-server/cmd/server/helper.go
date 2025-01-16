@@ -60,26 +60,6 @@ func (app *app) readPaginationParameters(queryString url.Values, key string, def
 	return i
 }
 
-// get userId of logged in user from cookie
-func (app *app) getUserIdFromCookie(request *http.Request) (int, error) {
-	cookie, err := request.Cookie("userId")
-
-	if err != nil {
-		if err == http.ErrNoCookie {
-			return -1, cookieNotFoundError
-		}
-
-		return -1, err
-	}
-
-	userId, err := strconv.ParseInt(cookie.Value, 10, 64)
-	if err != nil {
-		return -1, err
-	}
-
-	return int(userId), nil
-}
-
 /*
 Error JSON response helpers
 */
