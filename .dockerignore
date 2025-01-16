@@ -1,0 +1,8 @@
+server-configs/*
+tmp/*
+.air.toml
+.gitignore
+Dockerfile-test
+README.md
+.github/workflows/*
+bin/*
