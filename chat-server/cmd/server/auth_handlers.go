@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/harisheoran/my-chat-system/pkg/model"
@@ -83,8 +83,10 @@ func (app *app) loginHandler(w http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	fmt.Println("here", userId)
+
 	// create JWT token and send to the client
-	expirationTime := time.Now().Add(5 * time.Minute)
+	expirationTime := time.Now().Add(30 * time.Minute)
 	token, err := app.createJwtToken(userId, expirationTime)
 	if err != nil {
 		app.internalServerErrorJSONResponse(w, "failed to sign the JWT Token", err)
@@ -94,17 +96,6 @@ func (app *app) loginHandler(w http.ResponseWriter, request *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:    "token",
 		Value:   token,
-		Expires: expirationTime,
-		Secure:  false,
-		Path:    "/",
-	})
-
-	userIdString := strconv.Itoa(userId)
-
-	// set a cookie for saving userID
-	http.SetCookie(w, &http.Cookie{
-		Name:    "userId",
-		Value:   userIdString,
 		Expires: expirationTime,
 		Secure:  false,
 		Path:    "/",
@@ -129,13 +120,6 @@ func (app *app) logoutHandler(w http.ResponseWriter, request *http.Request) {
 		Path:    "/",
 	})
 
-	http.SetCookie(w, &http.Cookie{
-		Name:    "userId",
-		Value:   "",
-		Expires: time.Now(),
-		Secure:  false,
-		Path:    "/",
-	})
 	err := app.sendJSON(w, http.StatusOK, SuccessResponse{
 		Message: "Logout successfully",
 	})

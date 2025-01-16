@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -10,8 +11,10 @@ import (
 Contains all the middlewares
 */
 
+// authentication middleware
 func (app *app) CheckAutheticationMiddleware(handler http.Handler) http.Handler {
 	nextHandler := func(w http.ResponseWriter, request *http.Request) {
+		// get the cookie
 		cookie, err := request.Cookie("token")
 
 		if err != nil {
@@ -26,17 +29,21 @@ func (app *app) CheckAutheticationMiddleware(handler http.Handler) http.Handler 
 			return
 		}
 
+		// get JWT string from the cookie
 		jwtToken := cookie.Value
 
 		myClaims := &myJwtClaims{}
 
-		isTokenVerified, err := app.verifyToken(jwtToken, myClaims)
+		isTokenVerified, myClaims, err := app.verifyToken(jwtToken, myClaims)
 		if err != nil {
-			if err == jwt.ErrSignatureInvalid {
-				w.WriteHeader(http.StatusUnauthorized)
-				return
+			if err == jwt.ErrTokenSignatureInvalid {
+				app.serverErrorJsonResponse(w, http.StatusUnauthorized, ErrorResponse{
+					Message: "Not authorized, Invalid Token",
+				})
 			}
-			w.WriteHeader(http.StatusBadRequest)
+			app.serverErrorJsonResponse(w, http.StatusBadRequest, ErrorResponse{
+				Message: "Bad Request",
+			})
 			return
 		}
 
@@ -47,7 +54,10 @@ func (app *app) CheckAutheticationMiddleware(handler http.Handler) http.Handler 
 			return
 		}
 
-		handler.ServeHTTP(w, request)
+		ctx := request.Context()
+		ctx = context.WithValue(request.Context(), "userClaims", myClaims)
+
+		handler.ServeHTTP(w, request.WithContext(ctx))
 	}
 
 	return http.HandlerFunc(nextHandler)

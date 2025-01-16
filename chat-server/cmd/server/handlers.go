@@ -29,27 +29,27 @@ func (app *app) healthHandler(w http.ResponseWriter, request *http.Request) {
 	app.sendJSON(w, http.StatusOK, healthResponse)
 }
 
-// main chat handler which upgrade http/https connection to web socket connection
+// main chat handler which upgrade http/https connection to web socket connection and handle chats
 func (app *app) groupChatHandler(w http.ResponseWriter, request *http.Request) {
 
 	// upgrade connection to websocket
 	webSocketConnection, err := upgrader.Upgrade(w, request, nil)
 	if err != nil {
-		app.internalServerErrorJSONResponse(w, " unable to upgrade the connection to web socket", err)
+		app.internalServerErrorJSONResponse(w, "unable to upgrade the connection to web socket", err)
 		return
 	}
 
 	app.infologger.Println("connection successfully upgraded to Web Socket")
 
-	// get userId from cookies
-	userId, err := app.getUserIdFromCookie(request)
-	if err == cookieNotFoundError {
-		app.errorlogger.Println("user id cookie not found", err)
-		return
-	} else if err != nil {
-		app.infologger.Println("failed to get userId cookie", err)
+	// get userID from claims
+	claims, ok := request.Context().Value("userClaims").(*myJwtClaims)
+	if !ok {
+		app.errorlogger.Println("ERROR:", ok)
+		app.internalServerErrorJSONResponse(w, "failed to retrieve the claims from request context", nil)
 		return
 	}
+
+	userId := claims.UserId
 
 	// get channel id from path
 	vars := mux.Vars(request)
@@ -103,6 +103,7 @@ func (app *app) homeHandler(w http.ResponseWriter, request *http.Request) {
 message history handler
 */
 func (app *app) messageHistoryHandler(w http.ResponseWriter, request *http.Request) {
+
 	v := validator.New()
 
 	// get parameters from the request
