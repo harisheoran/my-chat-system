@@ -49,21 +49,21 @@ func (uc *UserController) CheckUserExist(email string) (bool, error) {
 }
 
 // check the credability of password of the user
-func (uc *UserController) Authenticate(email, password string) (int, error) {
+func (uc *UserController) Authenticate(email, password string) (model.User, error) {
 	user := model.User{}
 	result := uc.DbConnection.Where("Email= ?", email).First(&user)
 
 	if result.Error != nil {
-		return -1, result.Error
+		return user, result.Error
 	}
 
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 
 	if err == bcrypt.ErrMismatchedHashAndPassword {
-		return -1, gorm.ErrInvalidData
+		return user, gorm.ErrInvalidData
 	} else if err != nil {
-		return -1, err
+		return user, err
 	}
 
-	return int(user.ID), nil
+	return user, nil
 }

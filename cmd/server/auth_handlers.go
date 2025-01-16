@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -73,8 +72,8 @@ func (app *app) loginHandler(w http.ResponseWriter, request *http.Request) {
 	}
 
 	// check the authenticty of payload credentials
-	userId, err := app.userController.Authenticate(loginPayload.Email, loginPayload.Password)
-	if err != nil || userId < 0 {
+	user, err := app.userController.Authenticate(loginPayload.Email, loginPayload.Password)
+	if err != nil || int(user.ID) < 0 {
 		err := app.sendJSON(w, http.StatusNotFound, NotFoundResponse{
 			Message: "User Email or Password does not match.",
 		})
@@ -83,11 +82,9 @@ func (app *app) loginHandler(w http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	fmt.Println("here", userId)
-
 	// create JWT token and send to the client
 	expirationTime := time.Now().Add(30 * time.Minute)
-	token, err := app.createJwtToken(userId, expirationTime)
+	token, err := app.createJwtToken(int(user.ID), expirationTime)
 	if err != nil {
 		app.internalServerErrorJSONResponse(w, "failed to sign the JWT Token", err)
 	}
@@ -102,8 +99,9 @@ func (app *app) loginHandler(w http.ResponseWriter, request *http.Request) {
 	})
 
 	// send successfull login response
-	err = app.sendJSON(w, http.StatusOK, SuccessResponse{
-		Message: "Login succeeded",
+	err = app.sendJSON(w, http.StatusOK, map[string](string){
+		"name":    user.Name,
+		"message": "Login Succeded",
 	})
 	if err != nil {
 		app.internalServerErrorJSONResponse(w, "failed to send json response", err)
