@@ -17,9 +17,9 @@ type SuccessResponse struct {
 }
 
 type NotFoundResponse struct {
-	Message string
+	Message string `json:"message"`
 }
 
 type NotAuthorizedResponse struct {
-	Message string
+	Message string `json:"message"`
 }
