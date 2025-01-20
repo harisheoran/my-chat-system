@@ -67,7 +67,13 @@ func (app *app) CheckAutheticationMiddleware(handler http.Handler) http.Handler 
 func (app *app) corsMiddleware(nextHandler http.Handler) http.Handler {
 
 	handler := func(w http.ResponseWriter, request *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*") // Allow all origins
+		origin := request.Header.Get("Origin")
+		allowedOrigin := "http://localhost:5173" // Change to your frontend URL
+
+		if origin == allowedOrigin {
+			w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
