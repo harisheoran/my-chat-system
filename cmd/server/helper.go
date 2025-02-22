@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -34,12 +35,13 @@ func (app *app) sendJSON(w http.ResponseWriter, statusCode int, data interface{}
 
 // read the JSON from the request and convert JSON into GO objects
 func (app *app) readJSON(request *http.Request, target interface{}) error {
-
 	err := json.NewDecoder(request.Body).Decode(&target)
-	if err != nil {
+	switch {
+	case err == io.EOF:
+		app.infologger.Println("empty body here !!!")
+	case err != nil:
 		return err
 	}
-
 	return nil
 }
 
