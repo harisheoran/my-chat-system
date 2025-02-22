@@ -27,7 +27,7 @@ func (app *app) router() http.Handler {
 	appRouter.HandleFunc("/online-users/add/{userId}", app.addOnlineUser).Methods("POST")
 	appRouter.HandleFunc("/online-users/remove/{userId}", app.removeOnlineUser).Methods("POST")
 	appRouter.HandleFunc("/online-users/get-count", app.getOnlineUsersCount).Methods("GET")
-	appRouter.Use(app.CheckAutheticationMiddleware)
+	//	appRouter.Use(app.CheckAutheticationMiddleware)
 
 	return app.corsMiddleware(mainRouter)
 }

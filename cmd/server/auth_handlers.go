@@ -9,6 +9,7 @@ import (
 
 // user sign up
 func (app *app) signupHandler(w http.ResponseWriter, request *http.Request) {
+	app.infologger.Println("request came in here")
 	user := model.User{}
 	// read the json from request body
 	err := app.readJSON(request, &user)

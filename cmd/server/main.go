@@ -55,7 +55,7 @@ var (
 	TOPIC_NAME = "KAFKA_TEST"
 	producer   *kafka.Writer
 	consumer   *kafka.Reader
-	kafkaUrl   = "kafka-15e11ee5-project-54d1.c.aivencloud.com:25415"
+	kafkaUrl   = "kafka-15d8b6fd-innocentankit1141-1b6c.i.aivencloud.com:16948"
 )
 
 func main() {
